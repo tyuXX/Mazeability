@@ -48,6 +48,8 @@
       />
       <button id="generateButton">Generate Maze</button>
       <button id="solveButton">Solve Maze</button>
+      <button id="exportPngButton">Export as PNG</button>
+      <button id="exportSvgButton">Export as SVG</button>
     </div>
     <script>
       let { maze, cellSize } = generateMaze(
@@ -173,6 +175,35 @@
         return []; // Return empty path if no solution
       }
 
+      function exportAsPng() {
+        const canvas = document.getElementById('mazeCanvas');
+        const link = document.createElement('a');
+        link.download = 'maze.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+
+      function exportAsSvg() {
+        const rows = parseInt(document.getElementById('rowsInput').value);
+        const cols = parseInt(document.getElementById('colsInput').value);
+        let svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${cols * 10}' height='${rows * 10}'>`;
+
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            if (maze[y][x] === 0) {
+              svg += `<rect x='${x * 10}' y='${y * 10}' width='10' height='10' fill='black' />`;
+            }
+          }
+        }
+
+        svg += `</svg>`;
+        const blob = new Blob([svg], { type: 'image/svg+xml' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'maze.svg';
+        link.click();
+      }
+
       document
         .getElementById("generateButton")
         .addEventListener("click", () => {
@@ -206,6 +237,8 @@
           alert("No path found!");
         }
       });
+      document.getElementById('exportPngButton').addEventListener('click', exportAsPng);
+      document.getElementById('exportSvgButton').addEventListener('click', exportAsSvg);
     </script>
   </body>
 </html>
