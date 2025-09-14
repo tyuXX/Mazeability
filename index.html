@@ -4,54 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mazeability</title>
-    <style>
-      body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        background-color: #2e2e2e; /* Dark gray background */
-        font-family: Arial, sans-serif;
-        color: #ffffff; /* White text color */
-      }
-
-      canvas {
-        border: 2px solid #6a0dad; /* Purple border */
-        margin-bottom: 20px;
-        background-color: #000; /* Black background for the canvas */
-        width: calc(min(50vh, 50vw));
-        height: calc(min(50vh, 50vw));
-        image-rendering: pixelated;
-      }
-
-      button {
-        background-color: #6a0dad; /* Purple background */
-        color: #ffffff; /* White text */
-        border: none;
-        padding: 10px 15px;
-        margin: 5px;
-        cursor: pointer;
-        border-radius: 5px;
-        transition: background-color 0.3s;
-      }
-
-      button:hover {
-        background-color: #5a0a9d; /* Darker purple on hover */
-      }
-
-      input {
-        margin-right: 10px;
-        padding: 10px;
-        border: 1px solid #6a0dad; /* Purple border */
-        border-radius: 5px;
-        background-color: #444; /* Darker input background */
-        color: #ffffff; /* White text */
-      }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <canvas id="mazeCanvas" width="6000" height="6000"></canvas>
+    <div id="mazeContainer" style="width: 100%; max-width: 800px; margin: 0 auto;">
+      <svg id="mazeSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
     <div id="controls">
       <label id="statusLabel" for="Current status">Idle.</label>
       <input type="text" id="seedInput" placeholder="Enter seed" />
@@ -60,7 +18,7 @@
         id="rowsInput"
         placeholder="Enter rows"
         min="5"
-        max="50"
+        max="100"
         value="20"
       />
       <input
@@ -68,230 +26,22 @@
         id="colsInput"
         placeholder="Enter columns"
         min="5"
-        max="50"
+        max="100"
         value="20"
       />
       <button id="generateButton">Generate Maze</button>
+      <button id="generateAndDownloadButton">Generate & Download</button>
       <button id="solveButton">Solve Maze</button>
-      <button id="exportPngButton">Export as PNG</button>
-      <button id="exportSvgButton">Export as SVG</button>
+      <button id="exportSvgButton">Save SVG</button>
+      <div class="checkbox-container">
+        <input type="checkbox" id="optimizeWalls" checked>
+        <label for="optimizeWalls">Optimize Walls</label>
+      </div>
+      <div class="checkbox-container">
+        <input type="checkbox" id="memoryEfficient">
+        <label for="memoryEfficient" title="Use less memory (slower but works with larger mazes)">Memory Efficient</label>
+      </div>
     </div>
-    <script>
-      let { maze, cellSize } = generateMaze(
-        (seed =
-          document.getElementById("seedInput").value ||
-          Math.floor(Date.now() / 1000).toString()),
-        (rows = parseInt(document.getElementById("rowsInput").value)),
-        (cols = parseInt(document.getElementById("colsInput").value))
-      );
-
-      function seedrandom(seed) {
-        let m = 0x80000000,
-          a = 1103515245,
-          c = 12345;
-        let seedValue = seed
-          .split("")
-          .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        return function () {
-          seedValue = (a * seedValue + c) % m;
-          return seedValue / m;
-        };
-      }
-
-      function generateMaze(seed, rows, cols) {
-        document.getElementById("statusLabel").textContent = "Generating maze...";
-        const canvas = document.getElementById("mazeCanvas");
-        const ctx = canvas.getContext("2d");
-        const cellSize = Math.min(canvas.width / cols, canvas.height / rows);
-        const maze = Array.from({ length: rows }, () => Array(cols).fill(0));
-        const random = seedrandom(seed);
-
-        // Stack for iterative maze generation
-        const stack = [];
-        const startX = 1;
-        const startY = 1;
-        stack.push([startX, startY]);
-        maze[startY][startX] = 1; // Mark the starting cell as part of the maze
-
-        while (stack.length > 0) {
-          const [x, y] = stack[stack.length - 1];
-          const directions = [
-            [0, 1],
-            [1, 0],
-            [0, -1],
-            [-1, 0],
-          ];
-          directions.sort(() => random() - 0.5);
-
-          let carved = false;
-          for (const [dx, dy] of directions) {
-            const nx = x + dx * 2,
-              ny = y + dy * 2;
-            if (
-              nx >= 0 &&
-              ny >= 0 &&
-              nx < cols &&
-              ny < rows &&
-              maze[ny][nx] === 0
-            ) {
-              maze[y + dy][x + dx] = 1;
-              maze[ny][nx] = 1;
-              stack.push([nx, ny]);
-              carved = true;
-              break; // Exit the loop after carving
-            }
-          }
-
-          if (!carved) {
-            stack.pop(); // Backtrack if no direction was carved
-          }
-        }
-
-        // Draw the maze
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#000";
-        for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols; x++) {
-            if (maze[y][x] === 0) {
-              ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-            }
-          }
-        }
-
-        // Draw start and end points
-        ctx.fillStyle = "green"; // Start point color
-        ctx.fillRect(startX * cellSize, startY * cellSize, cellSize, cellSize);
-        ctx.fillStyle = "red"; // End point color
-        ctx.fillRect(
-          (cols - 2) * cellSize,
-          (rows - 2) * cellSize,
-          cellSize,
-          cellSize
-        );
-        document.getElementById("statusLabel").textContent = "Idle.";
-        return { maze, cellSize };
-      }
-
-      function solveMaze(maze, startX, startY, endX, endY) {
-        document.getElementById("statusLabel").textContent = "Solving maze...";
-        const stack = [[startX, startY]];
-        const visited = new Set();
-        const path = [];
-        const directions = [
-          [0, 1],
-          [1, 0],
-          [0, -1],
-          [-1, 0],
-        ];
-
-        while (stack.length > 0) {
-          const [x, y] = stack.pop();
-          if (x === endX && y === endY) {
-            path.push([x, y]);
-            return path;
-          }
-          if (!visited.has(`${x},${y}`)) {
-            visited.add(`${x},${y}`);
-            path.push([x, y]);
-            for (const [dx, dy] of directions) {
-              const nx = x + dx,
-                ny = y + dy;
-              // Check if the next cell is within bounds and is a path (1)
-              if (
-                nx >= 0 &&
-                ny >= 0 &&
-                nx < maze[0].length &&
-                ny < maze.length &&
-                maze[ny][nx] === 1
-              ) {
-                stack.push([nx, ny]);
-              }
-            }
-          }
-          // Backtrack if not the solution
-          path.pop();
-        }
-        document.getElementById("statusLabel").textContent = "Idle.";
-        return []; // Return empty path if no solution
-      }
-
-      function exportAsPng() {
-        document.getElementById("statusLabel").textContent = "Exporting .png...";
-        const canvas = document.getElementById("mazeCanvas");
-        const link = document.createElement("a");
-        link.download = "maze.png";
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-        document.getElementById("statusLabel").textContent = "Idle.";
-      }
-
-      function exportAsSvg() {
-        document.getElementById("statusLabel").textContent = "Exporting .svg...";
-        const rows = parseInt(document.getElementById("rowsInput").value);
-        const cols = parseInt(document.getElementById("colsInput").value);
-        let svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${
-          cols * 10
-        }' height='${rows * 10}'>`;
-
-        for (let y = 0; y < rows; y++) {
-          for (let x = 0; x < cols; x++) {
-            if (maze[y][x] === 0) {
-              svg += `<rect x='${x * 10}' y='${
-                y * 10
-              }' width='10' height='10' fill='black' />`;
-            }
-          }
-        }
-
-        svg += `</svg>`;
-        const blob = new Blob([svg], { type: "image/svg+xml" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "maze.svg";
-        link.click();
-        document.getElementById("statusLabel").textContent = "Idle.";
-      }
-
-      document
-        .getElementById("generateButton")
-        .addEventListener("click", () => {
-          const seed =
-            document.getElementById("seedInput").value ||
-            Math.floor(Date.now() / 1000).toString();
-          const rows = parseInt(document.getElementById("rowsInput").value);
-          const cols = parseInt(document.getElementById("colsInput").value);
-          ({ maze, cellSize } = generateMaze(seed, rows, cols));
-        });
-      document.getElementById("solveButton").addEventListener("click", () => {
-        const seed =
-          document.getElementById("seedInput").value ||
-          Math.floor(Date.now() / 1000).toString();
-        const rows = parseInt(document.getElementById("rowsInput").value);
-        const cols = parseInt(document.getElementById("colsInput").value);
-        const startX = 1;
-        const startY = 1;
-        const endX = cols - 2;
-        const endY = rows - 2;
-        const path = solveMaze(maze, startX, startY, endX, endY);
-
-        if (path.length) {
-          const canvas = document.getElementById("mazeCanvas");
-          const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "red";
-          path.forEach(([x, y]) => {
-            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-          });
-        } else {
-          alert("No path found!");
-        }
-      });
-      document
-        .getElementById("exportPngButton")
-        .addEventListener("click", exportAsPng);
-      document
-        .getElementById("exportSvgButton")
-        .addEventListener("click", exportAsSvg);
-    </script>
+    <script src="script.js"></script>
   </body>
 </html>
